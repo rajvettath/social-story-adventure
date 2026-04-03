@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script>
+// Clear stale service workers and caches from previous broken deployments
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(r=>r.forEach(x=>x.unregister()));
+  caches.keys().then(k=>k.forEach(c=>caches.delete(c)));
+}
+</script>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Story Adventure">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#7F77DD">
+<meta name="description" content="An evidence-based social skills game for children with autism.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Social Story Adventure</title>
+<style>
+:root {
+  --purple: #7F77DD;
+  --purple-dark: #534AB7;
+  --purple-light: #EEEDFE;
+  --purple-text: #3C3489;
+  --green: #1D9E75;
+  --green-light: #E1F5EE;
+  --green-dark: #0F6E56;
+  --red: #E24B4A;
+  --red-light: #FCEBEB;
+  --red-dark: #A32D2D;
+  --amber: #EF9F27;
+  --amber-light: #FAEEDA;
+  --amber-dark: #633806;
+  --text: #1a1a2e;
+  --text-muted: #6b7280;
+  --text-light: #9ca3af;
+  --bg: #ffffff;
+  --bg-2: #f8f7ff;
+  --bg-3: #f0efff;
+  --border: rgba(0,0,0,0.08);
+  --border-med: rgba(0,0,0,0.14);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-pill: 99px;
+  --shadow: 0 2px 12px rgba(127,119,221,0.12);
+  --shadow-lg: 0 8px 32px rgba(127,119,221,0.2);
+  /* Safe area for notch phones */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #f0efff;
+    --text-muted: #b5b0e8;
+    --text-light: #7d78b8;
+    --bg: #1a1728;
+    --bg-2: #231f35;
+    --bg-3: #2c2742;
+    --border: rgba(255,255,255,0.08);
+    --border-med: rgba(255,255,255,0.14);
+    --purple-light: #2c2742;
+    --green-light: #0d2e22;
+    --red-light: #2e1515;
+    --amber-light: #2e2108;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Rounded', 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+body {
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px 32px;
+}
+
+/* ── INSTALL BANNER ── */
+#install-banner {
+  display: none;
+  background: var(--purple);
+  color: white;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin: 12px 0;
+  align-items: center;
+  gap: 12px;
+  animation: slideDown 0.4s ease;
+}
+#install-banner.show { display: flex; }
+@keyframes slideDown { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
+#install-banner .ib-icon { font-size: 28px; flex-shrink: 0; }
+#install-banner .ib-text { flex: 1; }
+#install-banner .ib-title { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+#install-banner .ib-sub { font-size: 12px; opacity: 0.85; line-height: 1.4; }
+#install-btn {
+  background: white;
+  color: var(--purple-dark);
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+#install-close {
+  background: none; border: none; color: white; font-size: 18px; cursor: pointer; opacity: 0.7; flex-shrink: 0; padding: 4px;
+}
+
+/* iOS install guide */
+#ios-guide {
+  display: none;
+  background: var(--purple-light);
+  border: 1.5px solid var(--purple);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin: 12px 0;
+}
+#ios-guide.show { display: block; }
+#ios-guide p { font-size: 14px; color: var(--text); line-height: 1.6; margin-bottom: 8px; }
+#ios-guide ol { padding-left: 18px; }
+#ios-guide li { font-size: 13px; color: var(--text-muted); line-height: 1.7; }
+#ios-guide .share-icon { display: inline-block; background: var(--purple); color: white; border-radius: 6px; padding: 1px 6px; font-size: 12px; }
+#ios-close { background: var(--purple); color: white; border: none; border-radius: var(--radius-pill); padding: 8px 20px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 10px; width: 100%; }
+
+/* ── NAME SCREEN ── */
+#ns {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px 0 16px;
+  flex: 1;
+}
+.app-icon {
+  width: 88px; height: 88px;
+  background: var(--purple);
+  border-radius: 24px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 44px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-lg);
+}
+#ns h1 { font-size: 26px; font-weight: 700; color: var(--text); margin-bottom: 6px; letter-spacing: -0.5px; }
+.sub { font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; max-width: 300px; }
+.sci-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 24px; }
+.sci-chip { font-size: 11px; padding: 4px 10px; border-radius: var(--radius-pill); background: var(--bg-2); color: var(--text-muted); border: 1px solid var(--border); }
+
+#name-input {
+  width: 100%; max-width: 300px;
+  font-size: 20px;
+  padding: 16px 20px;
+  border-radius: var(--radius);
+  border: 2px solid var(--purple);
+  text-align: center;
+  background: var(--bg);
+  color: var(--text);
+  margin-bottom: 20px;
+  font-family: inherit;
+  -webkit-appearance: none;
+}
+#name-input:focus { outline: none; border-color: var(--purple-dark); box-shadow: 0 0 0 3px rgba(127,119,221,0.2); }
+#name-input::placeholder { color: var(--text-light); }
+
+.level-row { display: flex; gap: 12px; width: 100%; max-width: 320px; margin-bottom: 24px; }
+.level-btn {
+  flex: 1; padding: 16px 12px;
+  border-radius: var(--radius);
+  border: 2px solid var(--border-med);
+  background: var(--bg);
+  cursor: pointer; text-align: center;
+  transition: all 0.2s;
+  min-height: 90px;
+}
+.level-btn.on { border-color: var(--purple); background: var(--purple-light); box-shadow: var(--shadow); }
+.level-emoji { font-size: 28px; display: block; margin-bottom: 6px; }
+.level-name { font-size: 15px; font-weight: 600; color: var(--text); }
+.level-desc { font-size: 12px; color: var(--text-muted); margin-top: 3px; line-height: 1.4; }
+
+.go-btn {
+  width: 100%; max-width: 300px;
+  padding: 18px;
+  border-radius: var(--radius);
+  border: none;
+  background: var(--purple);
+  color: white;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.1s, background 0.2s;
+  letter-spacing: 0.2px;
+}
+.go-btn:active { transform: scale(0.97); background: var(--purple-dark); }
+
+/* ── PROGRESS ── */
+#pb {
+  display: none;
+  padding: 16px 0 8px;
+  position: sticky; top: 0;
+  background: var(--bg);
+  z-index: 10;
+}
+.prog-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.prog-label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+.prog-right { display: flex; align-items: center; gap: 8px; }
+.prog-stars { font-size: 14px; color: var(--text-muted); }
+#streak-badge {
+  display: none;
+  font-size: 12px; padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--amber-light);
+  color: var(--amber-dark);
+  font-weight: 600;
+}
+.prog-bar-bg { height: 8px; background: var(--bg-3); border-radius: var(--radius-pill); overflow: hidden; }
+.prog-bar-fill { height: 100%; background: linear-gradient(90deg, var(--purple), var(--green)); border-radius: var(--radius-pill); transition: width 0.5s ease; width: 0%; }
+.dots-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--bg-3); transition: all 0.3s; }
+.dot.ok { background: var(--green); }
+.dot.cur { background: var(--purple); transform: scale(1.3); }
+.dot.no { background: var(--red); }
+
+/* ── CALM BUTTON ── */
+#calm-bar { display: none; text-align: right; margin-bottom: 10px; }
+#calm-btn {
+  font-size: 13px; padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--purple);
+  background: transparent; color: var(--purple-dark);
+  cursor: pointer; font-family: inherit;
+  font-weight: 500;
+}
+#calm-btn:active { background: var(--purple-light); }
+
+/* ── BREATHING OVERLAY ── */
+#breathe-overlay {
+  display: none; position: fixed;
+  inset: 0; z-index: 100;
+  background: rgba(20,16,50,0.85);
+  align-items: center; justify-content: center;
+  padding: 24px;
+}
+#breathe-overlay.show { display: flex; }
+.breathe-box {
+  background: var(--bg);
+  border-radius: 24px;
+  padding: 28px 24px;
+  max-width: 320px; width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+.breathe-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.breathe-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.6; }
+#breathe-circle {
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  background: var(--purple-light);
+  border: 3px solid var(--purple);
+  margin: 0 auto 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--purple-dark); font-weight: 600;
+  transition: all 1.2s ease;
+}
+#breathe-label { font-size: 14px; color: var(--text-muted); height: 22px; margin-bottom: 20px; }
+#breathe-done {
+  width: 100%; padding: 16px;
+  border-radius: var(--radius);
+  border: none; background: var(--purple); color: white;
+  font-size: 16px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+#breathe-done:active { background: var(--purple-dark); }
+
+/* ── SCENE CARD ── */
+#scene-box {
+  display: none;
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+  padding: 20px 16px;
+  margin-bottom: 14px;
+  text-align: center;
+  transition: background 0.3s;
+}
+#scene-emoji { font-size: 72px; display: block; margin-bottom: 10px; line-height: 1; }
+#scene-badge {
+  display: inline-block; font-size: 12px; font-weight: 600;
+  padding: 4px 14px; border-radius: var(--radius-pill); margin-bottom: 10px;
+}
+#scene-title { font-size: 19px; font-weight: 700; color: var(--text); margin-bottom: 8px; letter-spacing: -0.3px; }
+#scene-text { font-size: 16px; line-height: 1.75; color: var(--text-muted); }
+#perspective-box {
+  display: none; border-radius: var(--radius-sm); padding: 12px 14px;
+  margin-top: 12px; font-size: 14px; line-height: 1.65;
+}
+#perspective-box .p-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.3px; text-transform: uppercase; }
+#question-text {
+  display: none; font-size: 17px; font-weight: 600; color: var(--text);
+  margin-top: 14px; padding-top: 14px; border-top: 1.5px solid var(--border);
+}
+
+/* ── EMOTION CHECK ── */
+#emotion-box {
+  display: none;
+  border-radius: var(--radius); border: 2px solid transparent;
+  padding: 18px 16px; margin-bottom: 14px; text-align: center;
+}
+.emotion-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 14px; line-height: 1.5; }
+.emotion-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.e-btn {
+  padding: 12px 14px; border-radius: var(--radius-sm);
+  border: 2px solid var(--border-med);
+  background: var(--bg); cursor: pointer;
+  font-size: 14px; font-family: inherit; color: var(--text);
+  transition: all 0.15s;
+  min-height: 52px;
+  line-height: 1.3;
+}
+.e-btn:active { transform: scale(0.96); }
+.e-btn.eok { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+.e-btn.eno { background: var(--red-light); border-color: var(--red); color: var(--red-dark); animation: shk 0.4s; }
+
+/* ── CHOICE BUTTONS ── */
+.choice-btn {
+  display: flex; align-items: flex-start; gap: 14px;
+  width: 100%; border-radius: var(--radius);
+  border: 2px solid var(--border-med);
+  padding: 16px; margin-bottom: 10px;
+  cursor: pointer; text-align: left;
+  background: var(--bg);
+  font-family: inherit;
+  transition: all 0.2s;
+  min-height: 64px;
+}
+.choice-btn:active:not(:disabled) { transform: scale(0.98); border-color: var(--purple); background: var(--purple-light); }
+.choice-icon { font-size: 26px; flex-shrink: 0; margin-top: 1px; line-height: 1; }
+.choice-label { font-size: 15px; color: var(--text); line-height: 1.55; text-align: left; }
+.choice-btn.good { background: var(--green-light); border-color: var(--green); }
+.choice-btn.bad { background: var(--red-light); border-color: var(--red); animation: shk 0.4s; }
+@keyframes shk { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+/* ── VARIABLE RATIO BONUS ── */
+#bonus-box {
+  display: none;
+  border-radius: var(--radius); padding: 16px;
+  background: var(--amber-light); border: 2px solid var(--amber);
+  text-align: center; margin-bottom: 12px;
+  animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes popIn { from{opacity:0;transform:scale(0.8)} to{opacity:1;transform:scale(1)} }
+#bonus-title { font-size: 17px; font-weight: 700; color: var(--amber-dark); margin-bottom: 4px; }
+#bonus-sub { font-size: 14px; color: var(--amber-dark); opacity: 0.85; line-height: 1.5; }
+
+/* ── FEEDBACK ── */
+#feedback-box {
+  display: none;
+  border-radius: var(--radius); padding: 16px 18px;
+  margin-bottom: 12px; border: 2px solid transparent;
+  animation: fadeUp 0.3s ease;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+#feedback-box.good { background: var(--green-light); border-color: var(--green); }
+#feedback-box.bad { background: var(--red-light); border-color: var(--red); }
+#fb-icon { font-size: 30px; display: block; margin-bottom: 6px; }
+#fb-title { font-size: 17px; font-weight: 700; margin-bottom: 5px; }
+#feedback-box.good #fb-title { color: var(--green-dark); }
+#feedback-box.bad #fb-title { color: var(--red-dark); }
+#fb-desc { font-size: 14px; line-height: 1.65; color: var(--text-muted); }
+#fb-outcome {
+  font-size: 14px; margin-top: 10px; padding: 10px 12px;
+  border-radius: var(--radius-sm); background: var(--bg);
+  color: var(--text-muted); line-height: 1.6; display: none;
+}
+#fb-outcome strong { color: var(--text); }
+#fb-correct {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1.5px solid var(--border); display: none;
+}
+#rw-prompt {
+  font-size: 13px; margin-top: 10px; padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--purple); background: var(--bg);
+  color: var(--text-muted); display: none; line-height: 1.6;
+}
+#rw-prompt strong { color: var(--purple-dark); }
+
+/* ── NEXT BUTTON ── */
+#next-btn {
+  display: none; width: 100%; padding: 18px;
+  border-radius: var(--radius); border: none;
+  background: var(--purple); color: white;
+  font-size: 16px; font-weight: 600; cursor: pointer;
+  margin-bottom: 16px; font-family: inherit;
+  box-shadow: var(--shadow);
+  transition: transform 0.1s, background 0.2s;
+}
+#next-btn:active { transform: scale(0.97); background: var(--purple-dark); }
+
+/* ── BURST ── */
+#burst {
+  display: none; position: fixed;
+  inset: 0; z-index: 999;
+  pointer-events: none;
+  align-items: center; justify-content: center;
+  font-size: 64px;
+}
+
+/* ── END SCREEN ── */
+#end-screen { display: none; padding-bottom: 32px; }
+.end-hero {
+  text-align: center; padding: 24px 20px;
+  border-radius: var(--radius); margin-bottom: 14px; border: 2px solid transparent;
+}
+.end-hero.gold { background: var(--amber-light); border-color: var(--amber); }
+.end-hero.silver { background: var(--bg-2); border-color: var(--border-med); }
+.end-hero.bronze { background: #FAECE7; border-color: #D85A30; }
+#end-emoji { font-size: 72px; display: block; margin-bottom: 10px; }
+#end-title { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 8px; letter-spacing: -0.5px; }
+#end-score { font-size: 15px; color: var(--text-muted); margin-bottom: 8px; }
+#end-stars { font-size: 36px; letter-spacing: 6px; margin-bottom: 10px; }
+#end-msg { font-size: 15px; line-height: 1.7; color: var(--text-muted); }
+
+.report-card {
+  background: var(--bg); border: 1.5px solid var(--border-med);
+  border-radius: var(--radius); padding: 18px; margin-bottom: 12px;
+}
+.report-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1.5px solid var(--border); }
+.report-header-left h3 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.report-header-left p { font-size: 12px; color: var(--text-muted); }
+.score-pill { font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: var(--radius-pill); background: var(--purple-light); color: var(--purple-dark); }
+.report-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.report-row:last-child { border-bottom: none; }
+.r-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.r-dot.ok { background: var(--green); }
+.r-dot.no { background: var(--red); }
+.r-name { flex: 1; color: var(--text); }
+.r-badge { font-size: 12px; padding: 3px 10px; border-radius: var(--radius-pill); font-weight: 600; }
+.r-badge.ok { background: var(--green-light); color: var(--green-dark); }
+.r-badge.no { background: var(--red-light); color: var(--red-dark); }
+
+.gen-card { background: var(--bg-2); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 12px; }
+.gen-card h3 { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.gen-card .gen-intro { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5; }
+.gen-skill { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.gen-skill:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.gen-topic { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.gen-contexts { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.ctx-tag { font-size: 11px; padding: 4px 10px; border-radius: var(--radius-pill); border: 1.5px solid var(--border-med); color: var(--text-muted); }
+.ctx-tag.done { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+.ctx-tag.todo { background: var(--red-light); border-color: var(--red); color: var(--red-dark); }
+.gen-tip { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+.rw-card { background: var(--purple-light); border-radius: var(--radius-sm); padding: 9px 12px; margin-top: 6px; font-size: 12px; color: var(--purple-text); line-height: 1.5; }
+
+.action-row { display: flex; gap: 10px; margin-bottom: 10px; }
+.action-row button {
+  flex: 1; padding: 16px; border-radius: var(--radius);
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: transform 0.1s;
+}
+.action-row button:active { transform: scale(0.97); }
+#print-btn { border: 1.5px solid var(--border-med); background: var(--bg); color: var(--text); }
+#restart-btn { border: none; background: var(--purple); color: white; }
+#retry-btn {
+  display: none; width: 100%; padding: 16px;
+  border-radius: var(--radius); border: 1.5px solid #D85A30;
+  background: #FAECE7; color: #712B13;
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  margin-bottom: 10px;
+}
+#retry-btn:active { transform: scale(0.97); }
+
+@media print {
+  #pb, #calm-bar, #next-btn, .action-row, #retry-btn, #install-banner, #ios-guide, #breathe-overlay, #burst, #bonus-box, #ns, #scene-box, #emotion-box, #choices-area, #feedback-box { display: none !important; }
+  #end-screen { display: block !important; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- INSTALL BANNER -->
+  <div id="install-banner">
+    <div class="ib-icon">📲</div>
+    <div class="ib-text">
+      <div class="ib-title">Add to Home Screen</div>
+      <div class="ib-sub">Play offline, any time — like a real app!</div>
+    </div>
+    <button id="install-btn">Install</button>
+    <button id="install-close">✕</button>
+  </div>
+
+  <!-- iOS INSTALL GUIDE -->
+  <div id="ios-guide">
+    <p><strong>📱 Install on your iPhone or iPad:</strong></p>
+    <ol>
+      <li>Tap the <span class="share-icon">⬆ Share</span> button at the bottom of Safari</li>
+      <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+      <li>Tap <strong>"Add"</strong> — done! 🎉</li>
+    </ol>
+    <button id="ios-close">Got it!</button>
+  </div>
+
+  <!-- BREATHING OVERLAY -->
+  <div id="breathe-overlay">
+    <div class="breathe-box">
+      <div class="breathe-title">Take a calm breath 😊</div>
+      <div class="breathe-sub">Follow the circle. Breathe in as it grows, out as it shrinks. 3 times.</div>
+      <div id="breathe-circle">breathe in</div>
+      <div id="breathe-label"></div>
+      <button id="breathe-done" onclick="closeBreathe()">I am ready →</button>
+    </div>
+  </div>
+
+  <!-- BURST -->
+  <div id="burst"></div>
+
+  <!-- NAME SCREEN -->
+  <div id="ns">
+    <div class="app-icon">🏡</div>
+    <h1>Social Story Adventure</h1>
+    <p class="sub">Learn to be kind, brave and a wonderful friend!</p>
+    <div class="sci-chips">
+      <span class="sci-chip">🧠 Perspective taking</span>
+      <span class="sci-chip">⭐ ABA reinforcement</span>
+      <span class="sci-chip">💡 Emotion recognition</span>
+      <span class="sci-chip">🌍 Generalisation</span>
+      <span class="sci-chip">💙 Breathing support</span>
+    </div>
+    <input id="name-input" type="text" maxlength="18" placeholder="Type your name..." autocomplete="off" />
+    <div class="level-row">
+      <div class="level-btn on" id="lvl-easy" onclick="setLvl('easy')">
+        <span class="level-emoji">🌤</span>
+        <div class="level-name">Easy</div>
+        <div class="level-desc">Ages 4–6<br>Simple words</div>
+      </div>
+      <div class="level-btn" id="lvl-hard" onclick="setLvl('hard')">
+        <span class="level-emoji">⚡</span>
+        <div class="level-name">Hard</div>
+        <div class="level-desc">Ages 7–10<br>Trickier choices</div>
+      </div>
+    </div>
+    <button class="go-btn" onclick="startGame()">Let's go! →</button>
+  </div>
+
+  <!-- PROGRESS BAR -->
+  <div id="pb">
+    <div class="prog-row">
+      <span class="prog-label" id="prog-label">Story 1 of 10</span>
+      <span class="prog-right">
+        <span class="prog-stars">⭐ <span id="star-count">0</span></span>
+        <span id="streak-badge"></span>
+      </span>
+    </div>
+    <div class="prog-bar-bg"><div class="prog-bar-fill" id="prog-fill"></div></div>
+    <div class="dots-row" id="dots-row"></div>
+  </div>
+
+  <!-- CALM BUTTON -->
+  <div id="calm-bar">
+    <button id="calm-btn" onclick="openBreathe()">💙 I need a calm moment</button>
+  </div>
+
+  <!-- SCENE -->
+  <div id="scene-box">
+    <span id="scene-emoji"></span>
+    <span id="scene-badge"></span>
+    <div id="scene-title"></div>
+    <div id="scene-text"></div>
+    <div id="perspective-box"></div>
+    <div id="question-text"></div>
+  </div>
+
+  <!-- EMOTION CHECK -->
+  <div id="emotion-box">
+    <div class="emotion-title" id="emotion-q"></div>
+    <div class="emotion-row" id="emotion-row"></div>
+  </div>
+
+  <!-- CHOICES -->
+  <div id="choices-area"></div>
+
+  <!-- VARIABLE RATIO BONUS -->
+  <div id="bonus-box">
+    <div id="bonus-title"></div>
+    <div id="bonus-sub"></div>
+  </div>
+
+  <!-- FEEDBACK -->
+  <div id="feedback-box">
+    <span id="fb-icon"></span>
+    <div id="fb-title"></div>
+    <div id="fb-desc"></div>
+    <div id="fb-outcome"></div>
+    <div id="fb-correct"></div>
+    <div id="rw-prompt"></div>
+  </div>
+
+  <button id="next-btn"></button>
+
+  <!-- END SCREEN -->
+  <div id="end-screen">
+    <div class="end-hero" id="end-hero">
+      <span id="end-emoji"></span>
+      <div id="end-title"></div>
+      <div id="end-score"></div>
+      <div id="end-stars"></div>
+      <div id="end-msg"></div>
+    </div>
+    <div class="report-card">
+      <div class="report-header">
+        <div class="report-header-left">
+          <h3>Teacher &amp; parent report</h3>
+          <p id="report-meta"></p>
+        </div>
+        <div class="score-pill" id="report-score"></div>
+      </div>
+      <div id="report-rows"></div>
+    </div>
+    <div class="gen-card">
+      <h3>🌍 Generalisation tracker</h3>
+      <p class="gen-intro">Research shows skills only truly generalise when practised across <strong>multiple settings</strong>. Tick off each context as you practise.</p>
+      <div id="gen-rows"></div>
+    </div>
+    <button id="retry-btn" onclick="retryMissed()">Try missed stories again ↺</button>
+    <div class="action-row">
+      <button id="print-btn" onclick="window.print()">🖨 Print report</button>
+      <button id="restart-btn" onclick="resetGame()">Play again ↺</button>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ── STORY DATA ──────────────────────────────────────────────────────────
+const SD = {
+easy:[
+  {emoji:"🏫",title:"A new friend",topic:"Making friends",contexts:["At school","At a party","In the park","At home with cousins"],color:"#EEEDFE",border:"#7F77DD",badge:"Friends",bc:"#534AB7",bb:"#EEEDFE",text:"Mia is sitting all alone at lunch. She has not spoken to anyone today.",perspective:"Mia might be feeling nervous and scared. She does not know anyone yet. She really hopes someone will say hello.",emotionQ:"How do you think Mia is feeling?",emotions:[{e:"😊",l:"Happy",ok:false},{e:"😔",l:"Sad & nervous",ok:true},{e:"😠",l:"Angry",ok:false},{e:"😎",l:"Excited",ok:false}],question:"What do you do?",choices:[{icon:"😄",label:'Walk over and say: "Hi! Can I sit with you?"',correct:true},{icon:"👀",label:"Look from far away but say nothing.",correct:false},{icon:"🏃",label:"Run and sit somewhere else.",correct:false}],good:"You were so brave! Saying hello changed Mia's whole day.",bad:"Mia is still sad. One small hello can make a huge difference.",outcome_good:"Mia feels so relieved! She smiles and says hi. You just made a new friend.",outcome_bad:"Mia stays alone and wonders if anyone will ever be kind.",rw:"Before school tomorrow, say hello to one person you do not usually talk to.",tip:"Practise introductions at home with puppets. Say: 'Hi! I am [name]. Can I play with you?'"},
+  {emoji:"🎁",title:"Sharing a toy",topic:"Sharing",contexts:["At a party","At school","At the park","At home"],color:"#E1F5EE",border:"#1D9E75",badge:"Sharing",bc:"#085041",bb:"#E1F5EE",text:"It is Tom's birthday. He really wants to play with the toy car you are holding.",perspective:"Tom feels excited but also a little sad — he cannot play with the toy at his own party.",emotionQ:"How is Tom feeling right now?",emotions:[{e:"🎉",l:"Only happy",ok:false},{e:"😔",l:"Sad & left out",ok:true},{e:"😠",l:"Angry",ok:false},{e:"😴",l:"Sleepy",ok:false}],question:"What is the kind thing to do?",choices:[{icon:"🤗",label:'Give Tom the car. Say: "Happy birthday! You can go first."',correct:true},{icon:"😤",label:'Hold it tight and say: "No! It is mine!"',correct:false},{icon:"😲",label:"Drop it on the floor and walk away.",correct:false}],good:"Wonderful! Sharing is the best birthday gift. Tom is so happy!",bad:"Tom feels sad on his own birthday. Offering the toy kindly helps everyone.",outcome_good:"Tom's face lights up! He says thank you and you both play together — even more fun!",outcome_bad:"Tom looks down and the party feels less happy.",rw:"Use a sand timer at home — take turns with a favourite toy for 2 minutes each.",tip:"Praise warmly every time your child shares without being asked."},
+  {emoji:"😊",title:"Saying sorry",topic:"Saying sorry",contexts:["At school","At home","At a friend's house","In public"],color:"#FAECE7",border:"#D85A30",badge:"Sorry",bc:"#712B13",bb:"#FAECE7",text:"You knocked over Leo's blocks by accident. He worked very hard on them.",perspective:"Leo feels surprised and disappointed. He is not sure if you meant to do it or even noticed.",emotionQ:"How does Leo feel right now?",emotions:[{e:"😄",l:"Happy",ok:false},{e:"😢",l:"Upset & confused",ok:true},{e:"😎",l:"Excited",ok:false},{e:"😴",l:"Sleepy",ok:false}],question:"What do you say to Leo?",choices:[{icon:"🙏",label:'"I am sorry Leo. Can I help you build it again?"',correct:true},{icon:"😄",label:"Laugh and walk away.",correct:false},{icon:"😑",label:"Say nothing and hope he forgets.",correct:false}],good:"Perfect! Saying sorry and offering to help makes Leo feel so much better.",bad:"Accidents happen. A kind sorry shows Leo that you care.",outcome_good:'Leo says: "It is okay! Let us build it together — even bigger!"',outcome_bad:"Leo feels hurt and wonders if you are a good friend.",rw:'Practise the sorry script in a mirror: "I am sorry. I did not mean to. Can I help?"',tip:"Use a visual sorry card listing the 3-step formula at home."},
+  {emoji:"✋",title:"Asking for help",topic:"Asking for help",contexts:["In class","At home","At a shop","With a new adult"],color:"#E6F1FB",border:"#378ADD",badge:"Help",bc:"#0C447C",bb:"#E6F1FB",text:"You do not understand the maths question. Your teacher is nearby.",perspective:"Your teacher wants to help every child. She feels happy when students ask — it means they are trying.",emotionQ:"How does your teacher feel when you ask for help?",emotions:[{e:"😄",l:"Happy to help",ok:true},{e:"😠",l:"Angry",ok:false},{e:"😔",l:"Sad",ok:false},{e:"😲",l:"Shocked",ok:false}],question:"What do you do?",choices:[{icon:"✋",label:"Put your hand up and ask for help politely.",correct:true},{icon:"😔",label:"Sit quietly and do nothing.",correct:false},{icon:"😤",label:"Shout out without raising your hand.",correct:false}],good:"Brilliant! Asking for help is brave and smart. Your teacher is glad you asked!",bad:"It is always okay to ask for help. Putting your hand up is the best way.",outcome_good:"Your teacher smiles and sits with you. Together you figure it out!",outcome_bad:"You stay confused and miss the rest of the lesson unnecessarily.",rw:'Practise saying "Excuse me, can you help me please?" at home today.',tip:"Create a visual cue card the child places on their desk to signal they need help."},
+  {emoji:"🥺",title:"A sad friend",topic:"Empathy",contexts:["At school","At home","In the park","At a club"],color:"#FBEAF0",border:"#D4537E",badge:"Feelings",bc:"#72243E",bb:"#FBEAF0",text:"Priya comes to school crying. Her pet goldfish died this morning.",perspective:"Priya feels very sad and alone. She hopes someone will notice and be kind.",emotionQ:"What is Priya feeling?",emotions:[{e:"😊",l:"Happy",ok:false},{e:"😢",l:"Very sad & grieving",ok:true},{e:"😠",l:"Angry",ok:false},{e:"😎",l:"Excited",ok:false}],question:"What do you do?",choices:[{icon:"🤗",label:'"I am sorry. That is really sad." Sit next to her.',correct:true},{icon:"👀",label:'Say: "It is just a fish. Stop crying."',correct:false},{icon:"😄",label:"Make funny faces to cheer her up.",correct:false}],good:"Beautiful! Just being there and listening means everything to a sad friend.",bad:"Sometimes people need to feel sad first. Being gentle is the kindest thing.",outcome_good:'Priya feels less alone. She whispers: "Thank you for being here."',outcome_bad:"Priya feels even more alone. Her sadness feels bigger because no one understands.",rw:"Next time a family member is upset, try sitting quietly with them first before saying anything.",tip:'Validate feelings first. Teach: "I am sorry. That sounds really hard."'},
+  {emoji:"🎲",title:"Taking turns",topic:"Taking turns",contexts:["Board games","School playground","Online games","At home"],color:"#EAF3DE",border:"#639922",badge:"Turns",bc:"#27500A",bb:"#EAF3DE",text:"You and Sam are playing a board game. It is Sam's turn but you really want to go.",perspective:"Sam is excited for his turn. If you skip it, he will feel the game is not fair.",emotionQ:"How would Sam feel if you took his turn?",emotions:[{e:"😊",l:"Happy",ok:false},{e:"😔",l:"Sad & frustrated",ok:true},{e:"😎",l:"Excited",ok:false},{e:"😴",l:"Sleepy",ok:false}],question:"What do you do?",choices:[{icon:"😊",label:"Wait patiently and cheer Sam on.",correct:true},{icon:"😤",label:"Grab the dice and go anyway.",correct:false},{icon:"😔",label:"Sulk and refuse to play anymore.",correct:false}],good:"Great patience! Waiting your turn makes the game fair and fun for everyone.",bad:"Taking someone's turn makes the game feel unfair. Waiting shows real self-control.",outcome_good:"Sam smiles. You both play fairly and the game is fun for everyone.",outcome_bad:"Sam crosses his arms and does not want to play anymore.",rw:"During your next family game, practise cheering for the other players on their turns.",tip:"Use a visual turn card — a physical card passed between players confirms whose turn it is."},
+  {emoji:"🏡",title:"Being a good winner",topic:"Winning & losing",contexts:["Sports","Board games","School races","Video games"],color:"#FAEEDA",border:"#EF9F27",badge:"Fair Play",bc:"#633806",bb:"#FAEEDA",text:"You just won the race. Your friend came last and looks upset.",perspective:"Your friend feels disappointed. They tried their best. Your words right now will really matter.",emotionQ:"How is your friend feeling after the race?",emotions:[{e:"🎉",l:"Happy for you",ok:false},{e:"😔",l:"Disappointed",ok:true},{e:"😎",l:"Excited",ok:false},{e:"😠",l:"Furious",ok:false}],question:"What do you say?",choices:[{icon:"🎉",label:'"Good race! You ran really fast too."',correct:true},{icon:"😄",label:'"I won! I am the best and you are the worst!"',correct:false},{icon:"👀",label:"Say nothing and walk away.",correct:false}],good:"True sportsmanship! Being kind when you win makes everyone feel respected.",bad:"Bragging hurts your friend. A kind word after winning is what champions do.",outcome_good:'Your friend smiles a little: "Thanks. Want to race again?"',outcome_bad:"Your friend's eyes fill with tears. They walk away.",rw:"After your next game — win or lose — practise saying one kind thing to the other player.",tip:"Model good sportsmanship yourself after every family game."},
+  {emoji:"📚",title:"Listening in class",topic:"Classroom rules",contexts:["At school","At a club","In a group activity","At the dinner table"],color:"#EEEDFE",border:"#7F77DD",badge:"Class",bc:"#534AB7",bb:"#EEEDFE",text:"Your teacher is talking. Your friend whispers something funny to you.",perspective:"Your teacher prepared something important. When children talk, she feels her hard work is not being respected.",emotionQ:"How might your teacher feel if you chat while she is talking?",emotions:[{e:"😊",l:"Happy",ok:false},{e:"😔",l:"A little hurt & ignored",ok:true},{e:"😎",l:"Excited",ok:false},{e:"😴",l:"Sleepy",ok:false}],question:"What do you do?",choices:[{icon:"😊",label:"Give a small smile then turn back and listen.",correct:true},{icon:"😆",label:"Laugh loudly and start chatting.",correct:false},{icon:"😑",label:"Stare out the window.",correct:false}],good:"Great self-control! You can chat at break time. Your teacher notices good listeners.",bad:"A small smile is fine — then turn back so you do not miss anything.",outcome_good:'Your teacher says: "I noticed how well you listened today."',outcome_bad:"You miss important information and your teacher feels sad.",rw:"Tonight at dinner, listen to one full story from someone without interrupting.",tip:'Practise "listening with eyes and ears" as a named skill before school each day.'},
+  {emoji:"📱",title:"Kind online",topic:"Online kindness",contexts:["Online games","Group chats","Social media","School tablets"],color:"#E1F5EE",border:"#1D9E75",badge:"Online",bc:"#085041",bb:"#E1F5EE",text:"You are playing an online game. Another player keeps making mistakes.",perspective:"The other player is probably already frustrated. Unkind words will make them feel worse.",emotionQ:"How might the other player be feeling?",emotions:[{e:"😊",l:"Happy",ok:false},{e:"😢",l:"Frustrated & embarrassed",ok:true},{e:"😎",l:"Excited",ok:false},{e:"😠",l:"Angry at you",ok:false}],question:"What do you type in the chat?",choices:[{icon:"😊",label:'"Good try! Let us work together."',correct:true},{icon:"😤",label:'"You are terrible! Stop playing!"',correct:false},{icon:"👀",label:"Say nothing but feel really angry inside.",correct:false}],good:"So kind! Encouraging words make the game fun for everyone.",bad:"Unkind words online hurt just as much as unkind words in real life.",outcome_good:'The other player types: "Thanks! That really helped." Your team plays better.',outcome_bad:"The other player leaves. Your team loses a player. Nobody wins.",rw:'Before sending any message online, ask: "Would I be happy if my teacher read this?"',tip:"Agree on a family rule: any online message must pass the 'would I say this to their face?' test."},
+  {emoji:"👾",title:"Joining a game",topic:"Joining in",contexts:["At the park","At school break","At a party","At a club"],color:"#FAECE7",border:"#D85A30",badge:"Friends",bc:"#712B13",bb:"#FAECE7",text:"Children are playing football. You want to join but no one has asked you.",perspective:"The children might not have noticed you. They are not being mean — they just do not know you want to join.",emotionQ:"Why might the group not have invited you yet?",emotions:[{e:"😠",l:"They do not like me",ok:false},{e:"😑",l:"They just have not noticed me",ok:true},{e:"😄",l:"They are too happy to stop",ok:false},{e:"😔",l:"They are angry at me",ok:false}],question:"What do you do?",choices:[{icon:"😊",label:'"Excuse me — can I play too please?"',correct:true},{icon:"😤",label:"Push into the game without asking.",correct:false},{icon:"😔",label:"Watch from far away and feel sad.",correct:false}],good:"That took real courage! Asking politely is the perfect way to join in.",bad:"Asking nicely gives everyone a chance to say yes. Pushing or doing nothing both feel harder.",outcome_good:'One child smiles: "Sure! You are on our team!" You run on feeling proud.',outcome_bad:"Either everyone gets upset, or you stand alone and miss the whole game.",rw:'This week, try asking to join one activity at school using: "Can I join you please?"',tip:"Role-play the joining scenario at home using stuffed animals or family members."}
+],
+hard:[
+  {emoji:"🏫",title:"The new student",topic:"Making friends",contexts:["At school","In a new club","At a sports team","On a school trip"],color:"#EEEDFE",border:"#7F77DD",badge:"Friends",bc:"#534AB7",bb:"#EEEDFE",text:"A new student joins your class mid-term. Everyone else ignores her at break.",perspective:"She feels anxious and lonely. She does not know any names. She hopes someone will be kind enough to approach her — but is too nervous to go first.",emotionQ:"What is likely going through the new student's mind?",emotions:[{e:"😎",l:"She is happy and confident",ok:false},{e:"😢",l:"Nervous, lonely, hoping for kindness",ok:true},{e:"😠",l:"She is angry at everyone",ok:false},{e:"😑",l:"She does not care",ok:false}],question:"What is the most helpful thing you can do?",choices:[{icon:"😄",label:"Introduce yourself and invite her to join your group.",correct:true},{icon:"👀",label:"Wait for your other friends to speak to her first.",correct:false},{icon:"😊",label:"Smile at her from across the room.",correct:false}],good:"Brilliant! Taking the first step when no one else does is real moral courage.",bad:"Waiting for others often means nobody acts. One brave hello can change someone's whole week.",outcome_good:"She relaxes. By the end of the week she considers you her first real friend.",outcome_bad:"She spends break alone again. Each day alone makes it harder to believe anyone will be kind.",rw:"Think of one person who might feel left out. Make a plan to say hello this week.",tip:"Discuss how it feels to be the new person somewhere unfamiliar. Validate that it is scary."},
+  {emoji:"🎂",title:"The last slice",topic:"Fairness & sharing",contexts:["At a party","At the dinner table","On a school trip","At a friend's house"],color:"#E1F5EE",border:"#1D9E75",badge:"Fairness",bc:"#085041",bb:"#E1F5EE",text:"There is one slice of birthday cake left. You and your friend both want it. Your friend has already had two slices.",perspective:"Your friend might not have noticed how many slices they have had. They are acting on impulse, not necessarily being greedy on purpose.",emotionQ:"If you grab the last slice, how will your friend likely feel?",emotions:[{e:"😊",l:"Totally fine",ok:false},{e:"😤",l:"Frustrated — it seems unfair",ok:true},{e:"😎",l:"Happy for you",ok:false},{e:"😑",l:"They won't notice",ok:false}],question:"What is the fairest thing to do?",choices:[{icon:"🤗",label:"Suggest splitting it so you both get some.",correct:true},{icon:"😤",label:"Grab it quickly — you only had one slice.",correct:false},{icon:"😔",label:"Say nothing but feel annoyed all day.",correct:false}],good:"Fairness in action! Suggesting a split shows real maturity.",bad:"Grabbing or staying silent both cause problems. A fair suggestion is always worth trying.",outcome_good:'Your friend grins: "Great idea!" You both enjoy half a slice and nobody feels cheated.',outcome_bad:"Either your friend resents you, or you feel silently annoyed for the rest of the party.",rw:"During your next meal, practise offering to share before taking the last portion.",tip:"Discuss fairness vs equality at home. Ask: 'Is it fair if one person has more than another?'"},
+  {emoji:"😢",title:"A misunderstanding",topic:"Conflict resolution",contexts:["With a friend","With a sibling","In a group chat","At school"],color:"#FAECE7",border:"#D85A30",badge:"Conflict",bc:"#712B13",bb:"#FAECE7",text:"Your friend thinks you said something mean about her. You did not — it was a misunderstanding.",perspective:"Your friend is genuinely hurt. Even though you did not mean to hurt her, the impact on her feelings is real. She needs to feel heard before she can hear your explanation.",emotionQ:"What does your friend need MOST from you right now?",emotions:[{e:"😔",l:"To feel heard first",ok:true},{e:"😄",l:"A funny joke",ok:false},{e:"😤",l:"To be told she is wrong",ok:false},{e:"👀",l:"Nothing — she will get over it",ok:false}],question:"What do you do?",choices:[{icon:"😊",label:'"I am sorry you feel hurt. Can I explain what happened?"',correct:true},{icon:"😤",label:'"I did NOT say that! You are completely wrong."',correct:false},{icon:"👀",label:"Say nothing and wait for her to calm down.",correct:false}],good:"Acknowledging feelings before explaining is the most effective and mature approach.",bad:"Defending yourself without acknowledging feelings tends to make arguments escalate.",outcome_good:'She takes a breath: "Okay... tell me what happened." The misunderstanding clears up in minutes.',outcome_bad:"She feels dismissed and more convinced than ever. The friendship suffers unnecessarily.",rw:'Practise: "I can see you are upset. Can I explain?" — it works in almost every misunderstanding.',tip:"Discuss the difference between intent and impact: 'I did not mean to hurt you, but I can see that you are hurt.'"},
+  {emoji:"📝",title:"Exam anxiety",topic:"Emotional regulation",contexts:["In an exam","In a test","During a timed activity","At a competition"],color:"#E6F1FB",border:"#378ADD",badge:"Regulation",bc:"#0C447C",bb:"#E6F1FB",text:"You are stuck on a hard exam question. Time is running out and you are feeling panicked.",perspective:"Your brain goes into freeze mode when it panics. This is a normal stress response — but there are strategies that help your brain start working again.",emotionQ:"What does your brain need when it is panicking?",emotions:[{e:"😔",l:"A strategy to break the freeze",ok:true},{e:"😄",l:"To pretend everything is fine",ok:false},{e:"😤",l:"To give up completely",ok:false},{e:"👀",l:"To re-read it 10 more times",ok:false}],question:"What is the most effective strategy?",choices:[{icon:"😊",label:"Take a slow breath, skip it, do other questions, then return.",correct:true},{icon:"😑",label:"Stare at it until time runs out.",correct:false},{icon:"😤",label:"Panic and stop writing altogether.",correct:false}],good:"Smart strategy! This is exactly what experienced test-takers do.",bad:"Freezing on one question costs marks on questions you could answer. Move on and return.",outcome_good:"You answer three other questions clearly. The hard one feels less intimidating when you return.",outcome_bad:"Time runs out. You leave questions blank — including ones you knew the answers to.",rw:"Practise the 'skip and return' strategy at home with a quiz. Treat it like a muscle.",tip:"Create an exam anxiety card: 1) Breathe. 2) Skip. 3) Return. Laminate it for the child to keep."},
+  {emoji:"🥺",title:"Standing up to teasing",topic:"Empathy & courage",contexts:["At school","At a club","Online","In the neighbourhood"],color:"#FBEAF0",border:"#D4537E",badge:"Courage",bc:"#72243E",bb:"#FBEAF0",text:"Some children are teasing another child about his glasses. They want you to join in.",perspective:"The child being teased feels humiliated and powerless. Each person who speaks up gives him back some dignity.",emotionQ:"What does the child being teased need most from bystanders?",emotions:[{e:"😔",l:"For someone to speak up",ok:true},{e:"😄",l:"For everyone to laugh",ok:false},{e:"👀",l:"To be ignored",ok:false},{e:"😑",l:"For people to walk away",ok:false}],question:"What do you do?",choices:[{icon:"😊",label:'"That is not kind." Then stand with the child being teased.',correct:true},{icon:"😤",label:"Join in so you fit in.",correct:false},{icon:"👀",label:"Walk away and tell yourself it is not your problem.",correct:false}],good:"Real moral courage. Being an upstander instead of a bystander changes everything.",bad:"Joining in causes harm. Walking away leaves someone hurt and alone. Speaking up matters.",outcome_good:'The teasing stops. The child says: "Thank you — no one usually does anything."',outcome_bad:"The teasing continues. Your silence signals this behaviour is acceptable.",rw:"Discuss: what is the difference between a bystander and an upstander? Plan one safe way to speak up.",tip:"Role-play upstander scenarios. Keep it simple: 'That is not kind.' Three words can change a moment."},
+  {emoji:"🎮",title:"Losing gracefully",topic:"Emotional regulation",contexts:["Board games","Sports","Video games","School competitions"],color:"#EAF3DE",border:"#639922",badge:"Regulation",bc:"#27500A",bb:"#EAF3DE",text:"You lose a board game you really wanted to win. You feel a strong urge to flip the board.",perspective:"Your opponent worked hard and won fairly. If you react badly, they will feel guilty for winning — that is not fair on them either.",emotionQ:"If you flip the board, how will your opponent feel?",emotions:[{e:"😊",l:"They will be happy",ok:false},{e:"😢",l:"Guilty — their win feels ruined",ok:true},{e:"😎",l:"Impressed",ok:false},{e:"😑",l:"They won't mind",ok:false}],question:"What do you do instead of flipping the board?",choices:[{icon:"😊",label:'Take a slow breath and say: "Good game. You played really well."',correct:true},{icon:"😤",label:"Flip the board and storm out.",correct:false},{icon:"😔",label:"Go silent and refuse to play again.",correct:false}],good:"Incredible self-regulation! Managing strong feelings is one of the hardest life skills.",bad:"Strong feelings after losing are normal. Taking a breath and responding with grace is a skill you can build.",outcome_good:'Your opponent smiles: "Thanks — good game! Want a rematch?" The friendship stays strong.',outcome_bad:"Your opponent feels bad about winning. They may not want to play with you again.",rw:'When you next feel a strong frustration, practise: "I feel frustrated. I need a moment."',tip:"Teach a 3-step regulation plan: 1) Name the feeling. 2) Breathe. 3) Choose a response."},
+  {emoji:"🏡",title:"Group work tension",topic:"Teamwork",contexts:["At school","In a sports team","In a club","In a family project"],color:"#FAEEDA",border:"#EF9F27",badge:"Teamwork",bc:"#633806",bb:"#FAEEDA",text:"In group work, one person keeps talking over everyone and ignoring other ideas.",perspective:"The person dominating may not realise they are doing it. The others feel invisible and demotivated.",emotionQ:"How do the other group members likely feel?",emotions:[{e:"😊",l:"Happy — they enjoy listening",ok:false},{e:"😢",l:"Invisible and frustrated",ok:true},{e:"😎",l:"Excited to hear more",ok:false},{e:"😑",l:"They do not notice",ok:false}],question:"What is the most effective thing to do?",choices:[{icon:"😊",label:'"I think we should hear everyone\'s ideas. Can I share mine?"',correct:true},{icon:"😤",label:"Shout at them to stop talking.",correct:false},{icon:"😔",label:"Give up sharing your ideas.",correct:false}],good:"Genuine leadership! Inviting all voices calmly is more effective than arguing or giving up.",bad:"Shouting creates conflict. Giving up means good ideas are lost. A calm assertion is most powerful.",outcome_good:"Others nod. You share your idea — it turns out to be the best one. The project improves.",outcome_bad:"Either the group argues, or the project suffers from only having one person's ideas.",rw:"In your next group activity, try assigning roles: speaker, note-taker, timekeeper.",tip:"Assign roles with visual role cards. Research shows structured roles dramatically improve group dynamics."},
+  {emoji:"📱",title:"A mean group message",topic:"Online empathy",contexts:["In group chats","On gaming platforms","On social media","In school messaging apps"],color:"#E1F5EE",border:"#1D9E75",badge:"Online",bc:"#085041",bb:"#E1F5EE",text:"Someone sends a mean message about a friend in a group chat. Others are laughing.",perspective:"The friend being targeted may see this message. Every laugh emoji tells them their classmates find humiliating them funny. This can cause lasting damage to their self-worth.",emotionQ:"How might the friend who is being discussed feel if they saw this chat?",emotions:[{e:"😊",l:"They would find it funny",ok:false},{e:"😭",l:"Devastated and humiliated",ok:true},{e:"😑",l:"They would not care",ok:false},{e:"😠",l:"Only angry",ok:false}],question:"What do you do?",choices:[{icon:"😊",label:"Send your friend a private message to check they are okay.",correct:true},{icon:"😤",label:"Send a laughing emoji so people think you are cool.",correct:false},{icon:"👀",label:"Leave the group chat without saying anything.",correct:false}],good:"Real empathy and courage. Reaching out privately is exactly the right response.",bad:"Joining in causes harm. Leaving silently abandons your friend. A private check-in takes seconds.",outcome_good:'Your friend replies: "I saw it. Thank you for checking on me. That means a lot."',outcome_bad:"Your friend sees the messages — including your silence — and feels completely alone.",rw:"Before reacting to any group message, ask: 'Would I be comfortable if the person could see my reaction?'",tip:"Agree on a family rule: before reacting to anything online, pause for 30 seconds."},
+  {emoji:"👤",title:"Feeling left out",topic:"Friendship resilience",contexts:["With close friends","In a group","At school","In a family situation"],color:"#EEEDFE",border:"#7F77DD",badge:"Resilience",bc:"#534AB7",bb:"#EEEDFE",text:"Your two best friends made plans without you. You find out at school and feel really hurt.",perspective:"Your friends probably were not trying to hurt you. They may have made a spontaneous plan. Your feelings are completely valid.",emotionQ:"Which thought is most likely to help you in this situation?",emotions:[{e:"😠",l:"They hate me — ignore them forever",ok:false},{e:"😊",l:"They did not mean to hurt me — I can tell them",ok:true},{e:"😔",l:"Never trust anyone again",ok:false},{e:"👀",l:"Pretend I am totally fine",ok:false}],question:"What is the most constructive thing to do?",choices:[{icon:"😊",label:'"I felt a bit left out. Can we all hang out soon?"',correct:true},{icon:"😤",label:"Ignore them for the rest of the week.",correct:false},{icon:"😔",label:"Pretend you do not care but feel sad inside.",correct:false}],good:"Emotional courage! Expressing hurt calmly — without blaming — strengthens friendships.",bad:"Ignoring or hiding feelings both create distance. Honest, kind communication is always best.",outcome_good:'Your friends look apologetic: "We didn\'t think! Let\'s do something together this weekend."',outcome_bad:"The distance grows. Resentment builds — over something that could have been solved in one conversation.",rw:'Practise: "I felt left out when... and I would like..." — fill in the blanks for a real situation.',tip:"Validate the feeling first. Then discuss: friends do not always do everything together — that is normal."},
+  {emoji:"😬",title:"Peer pressure",topic:"Resisting pressure",contexts:["At school","With friends","Online","In a new group"],color:"#FCEBEB",border:"#E24B4A",badge:"Courage",bc:"#A32D2D",bb:"#FCEBEB",text:"A friend dares you to write something rude on the whiteboard. Others are watching.",perspective:"Your friend may be trying to look funny. But if you do it, you will be the one who gets in trouble — and you will feel guilty, whether or not you get caught.",emotionQ:"How would you likely feel AFTER writing on the board?",emotions:[{e:"😄",l:"Proud and happy",ok:false},{e:"😢",l:"Guilty and anxious",ok:true},{e:"😎",l:"Cool and respected",ok:false},{e:"😑",l:"Nothing at all",ok:false}],question:"What do you do?",choices:[{icon:"😊",label:'"No thanks. That will just get us all in trouble."',correct:true},{icon:"😤",label:"Do it to look brave.",correct:false},{icon:"👀",label:"Walk to the other side of the room silently.",correct:false}],good:"Real confidence! Saying no to peer pressure — especially with others watching — is a superpower.",bad:"Doing it leads to regret. Silently walking away still leaves you feeling uncomfortable. A clear 'no' is braver.",outcome_good:'Later two people quietly say: "I am glad you said that. I did not want to either."',outcome_bad:"You feel guilty all day. The brief moment of seeming cool was not worth the anxiety.",rw:'"No thanks, that is not for me." Say it confidently to a family member and notice how it feels.',tip:"Discuss: true friends do not pressure you. Practise recognising the difference between a dare and a request."}
+]};
+
+// ── STATE ────────────────────────────────────────────────────────────
+let name='', lvl='easy', cur=0, stars=0, answered=false;
+let results=[], eAns=[], stories=[], streakCount=0;
+let vrBonus=[], emotionDone=false;
+let breathTimer=null, breathPhase=0, breathCycle=0;
+let deferredPrompt=null;
+
+// ── PWA INSTALL PROMPT ────────────────────────────────────────────────
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-banner').classList.add('show');
+});
+
+document.getElementById('install-btn').onclick = async () => {
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const {outcome} = await deferredPrompt.userChoice;
+  document.getElementById('install-banner').classList.remove('show');
+  deferredPrompt = null;
+};
+
+document.getElementById('install-close').onclick = () => {
+  document.getElementById('install-banner').classList.remove('show');
+};
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner').classList.remove('show');
+});
+
+// iOS detection — show manual guide
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isInStandalone = window.navigator.standalone === true;
+if(isIOS && !isInStandalone) {
+  setTimeout(() => {
+    document.getElementById('ios-guide').classList.add('show');
+  }, 2000);
+}
+document.getElementById('ios-close').onclick = () => {
+  document.getElementById('ios-guide').classList.remove('show');
+};
+
+// Service worker registration
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+function genVR(n) {
+  const pos=[]; let i=0;
+  while(i<n){i+=Math.floor(Math.random()*3)+2; if(i<n) pos.push(i);}
+  return pos;
+}
+
+function setLvl(l) {
+  lvl=l;
+  document.getElementById('lvl-easy').className='level-btn'+(l==='easy'?' on':'');
+  document.getElementById('lvl-hard').className='level-btn'+(l==='hard'?' on':'');
+}
+
+function startGame() {
+  name = document.getElementById('name-input').value.trim() || 'Friend';
+  stories = shuffle(SD[lvl]);
+  cur=0; stars=0; answered=false; results=[]; eAns=[]; streakCount=0;
+  vrBonus = genVR(stories.length);
+  hide('ns'); hide('end-screen'); hide('bonus-box');
+  show('pb'); show('scene-box'); show('calm-bar');
+  buildDots(); loadStory(0);
+}
+
+function retryMissed() {
+  const missed = stories.filter((_,i)=>results[i]===false);
+  if(!missed.length) return;
+  stories = shuffle(missed);
+  cur=0; stars=0; answered=false; results=[]; eAns=[]; streakCount=0;
+  vrBonus = genVR(stories.length);
+  hide('end-screen'); hide('bonus-box');
+  show('pb'); show('scene-box'); show('calm-bar');
+  buildDots(); loadStory(0);
+}
+
+function resetGame() {
+  cur=0; stars=0; answered=false; results=[]; eAns=[]; streakCount=0;
+  ['scene-box','choices-area','feedback-box','next-btn','emotion-box','calm-bar','bonus-box','pb','end-screen']
+    .forEach(hide);
+  show('ns');
+}
+
+function show(id){ const el=document.getElementById(id); if(el) el.style.display='block'; }
+function hide(id){ const el=document.getElementById(id); if(el) el.style.display='none'; }
+function flex(id){ const el=document.getElementById(id); if(el) el.style.display='flex'; }
+
+function buildDots() {
+  const row=document.getElementById('dots-row'); row.innerHTML='';
+  stories.forEach((_,i)=>{
+    const d=document.createElement('div');
+    d.className='dot'+(results[i]===true?' ok':results[i]===false?' no':i===cur?' cur':'');
+    row.appendChild(d);
+  });
+  document.getElementById('prog-fill').style.width=Math.round((cur/stories.length)*100)+'%';
+  document.getElementById('prog-label').textContent='Story '+(cur+1)+' of '+stories.length;
+  document.getElementById('star-count').textContent=stars;
+  const sb=document.getElementById('streak-badge');
+  if(streakCount>=2){ sb.textContent='🔥 '+streakCount+' streak'; sb.style.display='inline'; }
+  else sb.style.display='none';
+}
+
+// ── LOAD STORY ────────────────────────────────────────────────────────
+function loadStory(idx) {
+  answered=false; emotionDone=false;
+  const s=stories[idx];
+  const sb=document.getElementById('scene-box');
+  sb.style.background=s.color; sb.style.borderColor=s.border;
+  document.getElementById('scene-emoji').textContent=s.emoji;
+  const badge=document.getElementById('scene-badge');
+  badge.textContent=s.badge;
+  badge.style.cssText=`background:${s.bb};color:${s.bc};border:1.5px solid ${s.border};padding:4px 14px;border-radius:99px;font-size:12px;font-weight:600`;
+  document.getElementById('scene-title').textContent=s.title;
+  document.getElementById('scene-text').textContent=s.text;
+  const pb=document.getElementById('perspective-box');
+  pb.innerHTML=`<div class="p-title" style="color:${s.bc}">🧠 What is the other person thinking?</div>${s.perspective}`;
+  pb.style.cssText=`display:block;background:${s.bb};border:1.5px solid ${s.border};border-radius:10px;padding:12px 14px;margin-top:12px;font-size:14px;line-height:1.65`;
+  document.getElementById('question-text').textContent=s.question;
+  document.getElementById('question-text').style.display='none';
+  // Emotion check
+  const eb=document.getElementById('emotion-box');
+  eb.style.cssText=`display:block;background:${s.color};border:2px solid ${s.border};border-radius:16px;padding:18px 16px;margin-bottom:14px;text-align:center`;
+  document.getElementById('emotion-q').textContent=s.emotionQ;
+  const er=document.getElementById('emotion-row'); er.innerHTML='';
+  s.emotions.forEach((em,i)=>{
+    const b=document.createElement('button'); b.className='e-btn';
+    b.innerHTML=em.e+' '+em.l; b.onclick=()=>checkEmotion(i,b,s); er.appendChild(b);
+  });
+  document.getElementById('choices-area').innerHTML='';
+  hide('feedback-box'); hide('next-btn'); hide('bonus-box');
+  document.getElementById('fb-outcome').style.display='none';
+  document.getElementById('fb-correct').style.display='none';
+  document.getElementById('rw-prompt').style.display='none';
+  buildDots();
+}
+
+function checkEmotion(idx,btn,s) {
+  if(emotionDone) return; emotionDone=true;
+  const ok=s.emotions[idx].ok;
+  eAns.push(ok);
+  document.querySelectorAll('.e-btn').forEach(b=>b.disabled=true);
+  btn.className='e-btn '+(ok?'eok':'eno');
+  setTimeout(()=>{
+    hide('emotion-box');
+    document.getElementById('question-text').style.display='block';
+    buildChoices(s);
+  }, 900);
+}
+
+function buildChoices(s) {
+  const area=document.getElementById('choices-area'); area.innerHTML='';
+  s.choices.forEach((c,i)=>{
+    const btn=document.createElement('button'); btn.className='choice-btn';
+    btn.innerHTML=`<span class="choice-icon">${c.icon}</span><span class="choice-label">${c.label}</span>`;
+    btn.onclick=()=>choose(i,btn,s); area.appendChild(btn);
+  });
+}
+
+// ── AUDIO ─────────────────────────────────────────────────────────────
+function playTone(ok) {
+  try {
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    if(ok){
+      [523,659,784].forEach((f,i)=>{
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.frequency.value=f;o.type='sine';
+        g.gain.setValueAtTime(0,ctx.currentTime+i*.12);
+        g.gain.linearRampToValueAtTime(.13,ctx.currentTime+i*.12+.04);
+        g.gain.linearRampToValueAtTime(0,ctx.currentTime+i*.12+.22);
+        o.start(ctx.currentTime+i*.12);o.stop(ctx.currentTime+i*.12+.25);
+      });
+    } else {
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=200;o.type='sine';
+      g.gain.setValueAtTime(.1,ctx.currentTime);
+      g.gain.linearRampToValueAtTime(0,ctx.currentTime+.35);
+      o.start();o.stop(ctx.currentTime+.38);
+    }
+  } catch(e){}
+}
+
+function playBonus() {
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [523,659,784,1047].forEach((f,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=f;o.type='sine';
+      g.gain.setValueAtTime(0,ctx.currentTime+i*.1);
+      g.gain.linearRampToValueAtTime(.16,ctx.currentTime+i*.1+.04);
+      g.gain.linearRampToValueAtTime(0,ctx.currentTime+i*.1+.22);
+      o.start(ctx.currentTime+i*.1);o.stop(ctx.currentTime+i*.1+.25);
+    });
+  }catch(e){}
+}
+
+function burst(emoji) {
+  const b=document.getElementById('burst');
+  b.textContent=emoji; b.style.display='flex';
+  setTimeout(()=>b.style.display='none', 750);
+}
+
+// Variable-ratio bonus messages
+const BONUS_MSGS=[
+  {t:'Super Kindness Bonus! 🎊',s:'You have been making wonderful choices. You are a truly kind person!'},
+  {t:'Empathy Champion! 🏆',s:'You really understand how other people feel. That is a very special gift.'},
+  {t:'Courage Award! ⚡',s:'Being brave and kind at the same time is incredibly hard. You are doing it!'},
+  {t:'Friendship Star! ⭐',s:"The way you think about other people's feelings is what makes a great friend."},
+  {t:'Amazing Progress! 🎉',s:'You are growing your social skills with every story. Keep going!'}
+];
+
+// ── CHOOSE ────────────────────────────────────────────────────────────
+function choose(idx,btn,s) {
+  if(answered) return; answered=true;
+  const c=s.choices[idx];
+  document.querySelectorAll('.choice-btn').forEach(b=>b.disabled=true);
+  btn.className='choice-btn '+(c.correct?'good':'bad');
+
+  if(c.correct) {
+    stars++; streakCount++; results[cur]=true;
+    playTone(true); burst('✨');
+    if(vrBonus.includes(stars)) {
+      const msg=BONUS_MSGS[Math.floor(Math.random()*BONUS_MSGS.length)];
+      setTimeout(()=>{
+        document.getElementById('bonus-title').textContent=msg.t;
+        document.getElementById('bonus-sub').textContent=msg.s;
+        show('bonus-box'); playBonus(); burst('🎊');
+      },450);
+    }
+  } else {
+    streakCount=0; results[cur]=false; playTone(false); hide('bonus-box');
+  }
+
+  const fb=document.getElementById('feedback-box');
+  fb.className=c.correct?'good':'bad';
+  document.getElementById('fb-icon').textContent=c.correct?'✨':'💡';
+  document.getElementById('fb-title').textContent=c.correct?'Great choice, '+name+'!':'Let\'s think about that...';
+  document.getElementById('fb-desc').textContent=c.correct?s.good:s.bad;
+  const fbo=document.getElementById('fb-outcome');
+  fbo.style.display='block';
+  fbo.innerHTML='<strong>🧠 What happens next:</strong> '+(c.correct?s.outcome_good:s.outcome_bad);
+  const fbc=document.getElementById('fb-correct');
+  if(!c.correct){
+    const right=s.choices.find(x=>x.correct);
+    fbc.style.display='block';
+    fbc.textContent='The kind choice was: '+right.label;
+  }
+  const rwp=document.getElementById('rw-prompt');
+  rwp.style.display='block';
+  rwp.innerHTML='<strong>🌍 Try it in real life:</strong> '+s.rw;
+  show('feedback-box');
+  const nb=document.getElementById('next-btn');
+  show('next-btn');
+  nb.textContent=cur<stories.length-1?'Next story →':`See ${name}'s report →`;
+  buildDots();
+
+  // Scroll feedback into view
+  setTimeout(()=>fb.scrollIntoView({behavior:'smooth',block:'nearest'}), 100);
+}
+
+document.getElementById('next-btn').onclick = () => {
+  cur++;
+  if(cur>=stories.length) showEnd();
+  else {
+    loadStory(cur);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+};
+
+// ── BREATHING ─────────────────────────────────────────────────────────
+function openBreathe() {
+  breathPhase=0; breathCycle=0;
+  flex('breathe-overlay');
+  runBreathe();
+}
+function runBreathe() {
+  const phases=[
+    {label:'Breathe in...',size:'120px',text:'breathe in',dur:4000},
+    {label:'Hold...',size:'120px',text:'hold',dur:2000},
+    {label:'Breathe out...',size:'88px',text:'breathe out',dur:4000},
+    {label:'',size:'88px',text:'',dur:400}
+  ];
+  if(breathCycle>=3){
+    document.getElementById('breathe-label').textContent='Well done! You are calm and ready. 😊';
+    return;
+  }
+  const p=phases[breathPhase];
+  const circ=document.getElementById('breathe-circle');
+  circ.style.width=p.size; circ.style.height=p.size; circ.textContent=p.text;
+  document.getElementById('breathe-label').textContent=p.label;
+  breathTimer=setTimeout(()=>{
+    breathPhase++;
+    if(breathPhase>=phases.length){breathPhase=0; breathCycle++;}
+    runBreathe();
+  }, p.dur);
+}
+function closeBreathe() {
+  clearTimeout(breathTimer);
+  document.getElementById('breathe-overlay').style.display='none';
+}
+
+// ── END SCREEN ────────────────────────────────────────────────────────
+function showEnd() {
+  ['scene-box','choices-area','feedback-box','next-btn','emotion-box','calm-bar','bonus-box','pb']
+    .forEach(hide);
+  show('end-screen');
+  window.scrollTo({top:0,behavior:'smooth'});
+
+  const tot=stories.length, pct=Math.round((stars/tot)*100);
+  const eOk=eAns.filter(Boolean).length, ePct=eAns.length?Math.round((eOk/eAns.length)*100):0;
+
+  let emoji,title,sstr,msg,hc;
+  if(pct===100){emoji='🏆';title='Perfect, '+name+'!';sstr='⭐⭐⭐';msg='Every story correct! You are a truly kind, empathetic and courageous person. The world needs more people like you.';hc='gold';}
+  else if(pct>=70){emoji='🎉';title='Amazing, '+name+'!';sstr='⭐⭐⭐';msg="So many wonderful choices! You have a real gift for understanding people's feelings and doing the kind thing.";hc='gold';}
+  else if(pct>=50){emoji='😊';title='Well done, '+name+'!';sstr='⭐⭐';msg='Lots of great choices! Some situations were tricky — that is completely okay. Every story teaches something new.';hc='silver';}
+  else{emoji='🤝';title='Good try, '+name+'!';sstr='⭐';msg='These situations are genuinely hard. Play again — you will keep growing!';hc='bronze';}
+
+  document.getElementById('end-hero').className='end-hero '+hc;
+  document.getElementById('end-emoji').textContent=emoji;
+  document.getElementById('end-title').textContent=title;
+  document.getElementById('end-score').textContent=stars+'/'+tot+' correct ('+pct+'%) • Emotion recognition: '+eOk+'/'+eAns.length+' ('+ePct+'%)';
+  document.getElementById('end-stars').textContent=sstr;
+  document.getElementById('end-msg').textContent=msg;
+
+  const now=new Date();
+  document.getElementById('report-meta').textContent=name+' • '+now.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})+' • '+(lvl==='easy'?'Easy (4–6)':'Hard (7–10)');
+  document.getElementById('report-score').textContent=stars+'/'+tot+' ('+pct+'%)';
+
+  const rr=document.getElementById('report-rows'); rr.innerHTML='';
+  const tricky=[];
+  stories.forEach((s,i)=>{
+    const ok=results[i]===true; if(!ok) tricky.push(s);
+    const row=document.createElement('div'); row.className='report-row';
+    row.innerHTML=`<div class="r-dot ${ok?'ok':'no'}"></div><div class="r-name">${s.topic}</div><div class="r-badge ${ok?'ok':'no'}">${ok?'Got it':'Needs practice'}</div>`;
+    rr.appendChild(row);
+  });
+
+  // Generalisation tracker
+  const gr=document.getElementById('gen-rows'); gr.innerHTML='';
+  if(!tricky.length){
+    gr.innerHTML='<p style="color:#0F6E56;font-weight:600;font-size:14px">No areas of concern — perfect result for '+name+'! 🎉</p>';
+  } else {
+    tricky.forEach(s=>{
+      const div=document.createElement('div'); div.className='gen-skill';
+      const ctxHTML=s.contexts.map((c,i)=>`<span class="ctx-tag ${i===0?'done':'todo'}">${c}${i===0?' ✓':''}</span>`).join('');
+      div.innerHTML=`<div class="gen-topic">${s.topic}</div><div class="gen-contexts">${ctxHTML}</div><div class="gen-tip">${s.tip}</div><div class="rw-card">🌍 ${s.rw}</div>`;
+      gr.appendChild(div);
+    });
+    const note=document.createElement('p');
+    note.style.cssText='font-size:12px;color:var(--text-muted);margin-top:12px;line-height:1.5;padding-top:10px;border-top:1px solid var(--border)';
+    note.textContent='Green tick = practised in this setting. Aim to tick all four contexts. Research shows skills only truly generalise when practised across multiple different environments.';
+    gr.appendChild(note);
+  }
+
+  document.getElementById('retry-btn').style.display=tricky.length?'block':'none';
+}
+</script>
+</body>
+</html>
